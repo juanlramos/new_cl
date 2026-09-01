@@ -14,7 +14,8 @@ from sklearn.pipeline import make_pipeline
 from pathlib import Path
 
 from config import Config
-from network import SupConResNet
+import moco_builder
+import torchvision.models as models
 
 logger = logging.getLogger(__name__)
 
@@ -29,13 +30,27 @@ class LinearEvaluator:
         os.makedirs(self.results_path, exist_ok=True)
         self.csv_file = os.path.join(self.results_path, 'results.csv')
 
-    def load_backbone(self, checkpoint_path: str) -> SupConResNet:
-        model = SupConResNet(name=self.cfg.model.name, feat_dim=self.cfg.model.feat_dim)
-        checkpoint = torch.load(checkpoint_path, map_location=self.device)
-        
+    def load_backbone(self, checkpoint_path: str):
+        logger.info(f"Carregando checkpoint MoCo: {checkpoint_path}")
+
+        model = moco_builder.MoCo(
+            models.resnet50,
+            dim=128,
+            K=65536,
+            m=0.999,
+            T=0.07,
+            mlp=True
+        )
+
+        checkpoint = torch.load(
+            checkpoint_path,
+            map_location=self.device
+        )
+
         state_dict = checkpoint['model']
+
         new_state_dict = {}
-        
+
         for k, v in state_dict.items():
             name = k.replace("module.", "")
             new_state_dict[name] = v
@@ -43,27 +58,28 @@ class LinearEvaluator:
         model.load_state_dict(new_state_dict)
         model = model.to(self.device)
         model.eval()
-        
+
         return model
 
-    def extract_features(self, model: SupConResNet, loader) -> getattr:
+    def extract_features(self, model, loader):
         features_list = []
         labels_list = []
 
         with torch.no_grad():
             for images, labels in tqdm(loader, desc="Extraindo Features"):
-                
+
                 if isinstance(images, list):
                     images = images[0]
                 
                 images = images.to(self.device)
-                feats = model.encoder(images)
-                
+                feats = model.encoder_q(images)
+
                 features_list.append(feats.cpu().numpy())
                 labels_list.append(labels.numpy())
 
         X = np.concatenate(features_list, axis=0)
         y = np.concatenate(labels_list, axis=0)
+
         return X, y
 
     def train_svm(self, X_train, y_train):

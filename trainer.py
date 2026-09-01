@@ -15,6 +15,9 @@ from losses import SupConLoss
 from network import SupConResNet
 from utils import AverageMeter, accuracy
 
+import torchvision.models as models
+import moco_builder
+
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
@@ -24,8 +27,11 @@ class SupConTrainer:
         self.loader = train_loader
         self.writer = SummaryWriter(log_dir=os.path.join(self.cfg.train.checkpoint_dir, 'logs'))
         
-        self.model = SupConResNet(name=self.cfg.model.name, feat_dim=self.cfg.model.feat_dim)
-        self.criterion = SupConLoss(temperature=self.cfg.model.temp).to(self.cfg.train.device)
+        
+        # INJETANDO O MOCO V2 
+        self.model = moco_builder.MoCo(models.resnet50, 128, 65536, 0.999, 0.07, mlp=True) #MOCO V1 = MLP FALSE / MOCO V2 = MLP TRUE
+        self.model = self.model.to(self.cfg.train.device)
+        self.criterion = torch.nn.CrossEntropyLoss().to(self.cfg.train.device)
         
         if torch.cuda.device_count() > 1:
             self.model = nn.DataParallel(self.model)
@@ -74,21 +80,16 @@ class SupConTrainer:
             # Lógica de Warmup
             self.warmup_learning_rate(epoch, idx, len(self.loader))
 
-            # Preparação dos dados
-            images = torch.cat([images[0], images[1]], dim=0)
-            if torch.cuda.is_available():
-                images = images.to(self.cfg.train.device, non_blocking=True)
-                labels = labels.to(self.cfg.train.device, non_blocking=True)
-            
-            bsz = labels.shape[0]
+           # Preparação dos dados
+            im_q = images[0].to(self.cfg.train.device, non_blocking=True)
+            im_k = images[1].to(self.cfg.train.device, non_blocking=True)
+            bsz = im_q.shape[0]
 
             # Forward
-            features = self.model(images)
-            f1, f2 = torch.split(features, [bsz, bsz], dim=0)
-            features = torch.cat([f1.unsqueeze(1), f2.unsqueeze(1)], dim=1)
+            logits, target = self.model(im_q, im_k)
 
             # Loss
-            loss = self.criterion(features, labels)
+            loss = self.criterion(logits, target)
             losses.update(loss.item(), bsz)
 
             # Backward

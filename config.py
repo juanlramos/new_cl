@@ -26,7 +26,7 @@ class DataConfig:
 @dataclass
 class ModelConfig:
     name: str = 'resnet50'
-    method: str = 'SupCon'
+    method: str = 'MoCo'
     temp: float = 0.07
     feat_dim: int = 128
     model_config_str: str = field(init=False) 
@@ -69,7 +69,7 @@ class TrainConfig:
 class EvalConfig:
     svm_c: List[float] = field(default_factory=lambda: [0.01, 0.1, 1.0, 10.0])
     svm_kernel: List[str] = field(default_factory=lambda: ['linear', 'rbf'])
-    n_jobs: int = -1
+    n_jobs: int = 2
     
     batch_size_inference: int = 64
 
