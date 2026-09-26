@@ -27,6 +27,7 @@ class DataConfig:
 class ModelConfig:
     name: str = 'resnet50'
     method: str = 'MoCo'
+    moco_version: int = 2
     temp: float = 0.07
     feat_dim: int = 128
     model_config_str: str = field(init=False) 

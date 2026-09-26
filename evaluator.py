@@ -39,7 +39,7 @@ class LinearEvaluator:
             K=65536,
             m=0.999,
             T=0.07,
-            mlp=True
+            mlp=(self.cfg.model.moco_version == 2)
         )
 
         checkpoint = torch.load(
