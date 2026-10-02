@@ -28,6 +28,7 @@ class ModelConfig:
     name: str = 'resnet50'
     method: str = 'MoCo'
     moco_version: int = 2
+    pretrained: bool = False
     temp: float = 0.07
     feat_dim: int = 128
     model_config_str: str = field(init=False) 
@@ -84,19 +85,23 @@ class Config:
     @property
     def name(self) -> str:
         base_str = f"{self.data.dataset_name}_"
-        
+
         if self.train.crop_with_validation:
             base_str += f"VAL_CROP[{self.train.crop_validation_info_ratio}]"
         else:
-            base_str += f"NO_VAL_CROP"
-            
+            base_str += "NO_VAL_CROP"
+
+        pretrained_str = "_Pretrained" if self.model.pretrained else ""
+
         return (
             f"{base_str}_"
             f"IMG[{self.data.resize_size}]_"
             f"B[{self.data.batch_size}]_"
             f"E[{self.train.epochs}]_"
             f"{self.model.name}_"
-            f"{self.model.method}"
+            f"{self.model.method}_"
+            f"V{self.model.moco_version}"
+            f"{pretrained_str}"
         )
 
     """Retorna o caminho completo onde o modelo será salvo."""

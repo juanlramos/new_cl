@@ -35,11 +35,12 @@ class LinearEvaluator:
 
         model = moco_builder.MoCo(
             models.resnet50,
-            dim=128,
+            dim=self.cfg.model.feat_dim,
             K=65536,
             m=0.999,
-            T=0.07,
-            mlp=(self.cfg.model.moco_version == 2)
+            T=self.cfg.model.temp,
+            mlp=(self.cfg.model.moco_version == 2),
+            pretrained=self.cfg.model.pretrained
         )
 
         checkpoint = torch.load(

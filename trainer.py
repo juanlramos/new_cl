@@ -29,7 +29,15 @@ class SupConTrainer:
         
         
         # INJETANDO O MOCO V2 
-        self.model = moco_builder.MoCo(models.resnet50, 128, 65536, 0.999, 0.07, mlp=True) #MOCO V1 = MLP FALSE / MOCO V2 = MLP TRUE
+        self.model = moco_builder.MoCo(
+            models.resnet50,
+            dim=self.cfg.model.feat_dim,
+            K=65536,
+            m=0.999,
+            T=self.cfg.model.temp,
+            mlp=(self.cfg.model.moco_version == 2),
+            pretrained=self.cfg.model.pretrained
+        )
         self.model = self.model.to(self.cfg.train.device)
         self.criterion = torch.nn.CrossEntropyLoss().to(self.cfg.train.device)
         

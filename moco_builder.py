@@ -1,37 +1,96 @@
 import torch
 import torch.nn as nn
+import torchvision.models as models
 
 class MoCo(nn.Module):
-    def __init__(self, base_encoder, dim=128, K=65536, m=0.999, T=0.07, mlp=False): #false = v1/ true = v2
+
+    def __init__(
+        self,
+        base_encoder,
+        dim=128,
+        K=65536,
+        m=0.999,
+        T=0.07,
+        mlp=False,
+        pretrained=False
+    ):
         """
         dim: feature dimension (default: 128)
         K: queue size; number of negative keys (default: 65536)
         m: moco momentum of updating key encoder (default: 0.999)
         T: softmax temperature (default: 0.07)
+        mlp: False = MoCo v1 / True = MoCo v2
+        pretrained: utiliza pesos pré-treinados da ImageNet
         """
 
         super(MoCo, self).__init__()
+
         self.K = K
         self.m = m
         self.T = T
 
         # Cria os dois encoders
-        self.encoder_q = base_encoder(num_classes=dim)
-        self.encoder_k = base_encoder(num_classes=dim)
+        if pretrained:
+            self.encoder_q = base_encoder(
+                weights=models.ResNet50_Weights.DEFAULT
+            )
 
-        if mlp:  # Ativa a camada extra do MoCoV2
+            self.encoder_k = base_encoder(
+                weights=models.ResNet50_Weights.DEFAULT
+            )
+
+            # Substitui a camada final da ResNet50
+            # para produzir vetores de dimensão 'dim'
+            self.encoder_q.fc = nn.Linear(
+                self.encoder_q.fc.in_features,
+                dim
+            )
+
+            self.encoder_k.fc = nn.Linear(
+                self.encoder_k.fc.in_features,
+                dim
+            )
+        else:
+            self.encoder_q = base_encoder(num_classes=dim)
+            self.encoder_k = base_encoder(num_classes=dim)
+
+        if mlp:
             dim_mlp = self.encoder_q.fc.weight.shape[1]
-            self.encoder_q.fc = nn.Sequential(nn.Linear(dim_mlp, dim_mlp), nn.ReLU(), self.encoder_q.fc)
-            self.encoder_k.fc = nn.Sequential(nn.Linear(dim_mlp, dim_mlp), nn.ReLU(), self.encoder_k.fc)
 
-        for param_q, param_k in zip(self.encoder_q.parameters(), self.encoder_k.parameters()):
-            param_k.data.copy_(param_q.data) 
-            param_k.requires_grad = False  # Key encoder não atualiza por gradiente
+            self.encoder_q.fc = nn.Sequential(
+                nn.Linear(dim_mlp, dim_mlp),
+                nn.ReLU(),
+                self.encoder_q.fc
+            )
 
-        # Cria a fila (Dicionário dinâmico)
-        self.register_buffer("queue", torch.randn(dim, K))
-        self.queue = nn.functional.normalize(self.queue, dim=0)
-        self.register_buffer("queue_ptr", torch.zeros(1, dtype=torch.long))
+            self.encoder_k.fc = nn.Sequential(
+                nn.Linear(dim_mlp, dim_mlp),
+                nn.ReLU(),
+                self.encoder_k.fc
+            )
+
+        for param_q, param_k in zip(
+            self.encoder_q.parameters(),
+            self.encoder_k.parameters()
+        ):
+            param_k.data.copy_(param_q.data)
+            param_k.requires_grad = False
+
+        # Cria a fila
+        self.register_buffer(
+            "queue",
+            torch.randn(dim, K)
+        )
+
+        self.queue = nn.functional.normalize(
+            self.queue,
+            dim=0
+        )
+
+        self.register_buffer(
+            "queue_ptr",
+            torch.zeros(1, dtype=torch.long)
+        )
 
     @torch.no_grad()
     def _momentum_update_key_encoder(self):
