@@ -17,6 +17,7 @@ def main():
     parser.add_argument('--batch_sizes', type=int, nargs='+', default=[32], help='Lista de batch sizes para executar sequencialmente (preferencialmente múltiplos de 8). Ex: 8 16 32 64 128')
     parser.add_argument('--moco_version', type=int, choices=[1, 2], default=2, help='Versão do MoCo: 1 para MoCo v1 ou 2 para MoCo v2')
     parser.add_argument('--pre_trained', action='store_true', help='Utiliza pesos pré-treinados da ResNet50 na ImageNet')
+    parser.add_argument('--resize_size', type=int, default=112, choices=[112, 224], help='Tamanho das imagens de entrada: 112 ou 224 (padrão: 112)')
     args = parser.parse_args()
 
     if not args.train and not args.eval:
@@ -25,8 +26,12 @@ def main():
     
     cfg = Config()
 
+    cfg.data.resize_size = args.resize_size
+
     cfg.model.moco_version = args.moco_version
     cfg.model.pretrained = args.pre_trained
+
+    logger.info(f"Tamanho das imagens: {cfg.data.resize_size}x{cfg.data.resize_size}")
     
     if args.batch_sizes is None:
         default_batch = cfg.data.batch_size

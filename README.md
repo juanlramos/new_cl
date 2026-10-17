@@ -65,7 +65,19 @@ Entre os parâmetros disponíveis estão:
 
 O argumento `--batch_sizes` da linha de comando tem valor padrão `32`. Quando esse argumento é utilizado, o valor informado substitui o tamanho do lote definido no arquivo de configuração.
 
-Para alterar o tamanho das imagens, modifique `resize_size` em `config.py`. Não existe um argumento de linha de comando específico para esse parâmetro na implementação atual.
+O tamanho das imagens pode ser definido pela linha de comando utilizando o argumento `--resize_size`. Os valores aceitos são `112` e `224`, sendo `112` o padrão caso o argumento não seja informado.
+
+Exemplos:
+
+```bash
+# Imagens com tamanho 112x112
+python main.py --train --batch_sizes 32 --moco_version 1 --resize_size 112
+
+# Imagens com tamanho 224x224
+python main.py --train --batch_sizes 32 --moco_version 1 --resize_size 224
+```
+
+O tamanho informado é aplicado ao processamento das imagens e registrado no nome do diretório do experimento, permitindo distinguir experimentos realizados com tamanhos diferentes.
 
 ## 4. Treinamento
 
@@ -206,7 +218,7 @@ Para um experimento MoCo v2 que utilizou pesos pré-treinados:
 python main.py --eval --batch_sizes 32 --moco_version 2 --pre_trained
 ```
 
-**Importante:** os argumentos usados na avaliação devem corresponder aos utilizados no treinamento, incluindo a versão do MoCo, o uso de pesos pré-treinados e o tamanho do lote. Essas configurações participam da identificação do diretório do experimento.
+**Importante:** os argumentos usados na avaliação devem corresponder aos utilizados no treinamento, incluindo a versão do MoCo, o uso de pesos pré-treinados, o tamanho do lote e o tamanho das imagens (`--resize_size`). Essas configurações participam da identificação do diretório do experimento.
 
 A avaliação precisa encontrar os checkpoints já gerados. Portanto, execute o treinamento antes de avaliar um novo experimento.
 
@@ -238,6 +250,7 @@ A avaliação é realizada para os checkpoints encontrados no diretório do expe
 | `--batch_sizes` | Define um ou mais tamanhos de lote |
 | `--moco_version {1,2}` | Seleciona MoCo v1 ou MoCo v2 |
 | `--pre_trained` | Habilita os pesos pré-treinados do ImageNet |
+| `--resize_size {112,224}` | Define o tamanho das imagens de entrada; padrão: `112` |
 
 Para consultar a ajuda disponibilizada pelo programa:
 
@@ -254,7 +267,8 @@ Para comparar os resultados de maneira consistente:
 3. Utilize a mesma versão do MoCo na avaliação e no treinamento.
 4. Informe `--pre_trained` na avaliação quando essa opção tiver sido utilizada no treinamento.
 5. Utilize o mesmo tamanho de lote para localizar o diretório correto do experimento.
-6. Preserve os checkpoints e os arquivos CSV gerados.
+6. Utilize o mesmo valor de `--resize_size` no treinamento e na avaliação.
+7. Preserve os checkpoints e os arquivos CSV gerados.
 
 A reprodutibilidade também depende de fatores como versões das bibliotecas, disponibilidade de GPU, sementes aleatórias e comportamento não determinístico de algumas operações. Portanto, registrar o ambiente e as configurações utilizadas é importante para interpretar diferenças entre execuções.
 
@@ -285,6 +299,7 @@ As principais possibilidades de experimentação incluem:
 - Comparação entre MoCo v1 e MoCo v2.
 - Comparação entre treinamentos com e sem pesos pré-treinados no ImageNet.
 - Avaliação de diferentes tamanhos de lote.
+- Comparação entre imagens de entrada de 112 × 112 e 224 × 224.
 - Comparação das métricas de classificação ao longo das épocas.
 
 Os resultados devem ser interpretados considerando as configurações de cada experimento e a divisão do dataset utilizada.
