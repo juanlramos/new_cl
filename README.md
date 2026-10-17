@@ -1,389 +1,290 @@
-# Classificação de Espécies de Plantas com Aprendizado Contrastivo
+# Classificação de Espécies de Plantas com MoCo
 
-Projeto de classificação de espécies de plantas pertencentes à mesma família utilizando Contrastive Learning.
+Este projeto implementa um método de aprendizado auto-supervisionado baseado em **Momentum Contrast (MoCo)** para extração de características de imagens de plantas. As características extraídas são utilizadas posteriormente em um classificador SVM para avaliar o desempenho na classificação das espécies.
 
-A implementação utiliza MoCo (Momentum Contrast) como método de aprendizado contrastivo, com ResNet-50 como backbone. Após o treinamento da representação, as características extraídas pelo modelo são utilizadas em uma segunda etapa de avaliação utilizando um SVM (Support Vector Machine).
+O projeto permite utilizar as versões **MoCo v1 e MoCo v2**, com a opção de inicializar a ResNet-50 com pesos pré-treinados no ImageNet.
 
----
+## 1. Requisitos
 
-## 1. Tecnologias utilizadas
+- Python 3.10 ou compatível com as dependências do projeto.
+- PyTorch e Torchvision.
+- GPU NVIDIA compatível com a versão CUDA instalada é recomendada para acelerar o treinamento.
+- Dataset de imagens organizado conforme a estrutura descrita abaixo.
 
-* Python
-* PyTorch
-* Torchvision
-* CUDA
-* ResNet-50
-* MoCo (Momentum Contrast)
-* Scikit-learn
-* SVM
-* TensorBoard
-* NumPy
-* Pandas
-* Matplotlib
-
----
-
-## 2. Requisitos
-
-Recomenda-se utilizar:
-
-* Python 3.10 ou compatível
-* GPU NVIDIA compatível com CUDA para acelerar o treinamento
-
-O projeto também pode ser executado em CPU, porém o treinamento será significativamente mais lento.
-
----
-
-# 3. Clonando o projeto
-
-Clone o repositório utilizando:
+Instale as dependências utilizando:
 
 ```bash
-git clone https://github.com/juanlramos/new_cl.git
-```
-
-Entre na pasta do projeto:
-
-```bash
-cd new_cl
-```
-
----
-
-# 4. Criando o ambiente virtual
-
-É recomendado utilizar um ambiente virtual para evitar conflitos entre as dependências do projeto e as bibliotecas instaladas globalmente no computador.
-
-No Windows:
-
-```powershell
-python -m venv .venv
-```
-
-Ative o ambiente virtual:
-
-```powershell
-.venv\Scripts\Activate.ps1
-```
-
-Quando o ambiente estiver ativo, o terminal deverá apresentar algo semelhante a:
-
-```text
-(.venv) PS C:\...\projeto>
-```
-
----
-
-# 5. Instalação do PyTorch e Torchvision com CUDA
-
-O projeto utiliza PyTorch e Torchvision para treinamento do modelo.
-
-Para o ambiente utilizado neste projeto, foram utilizadas:
-
-```text
-PyTorch: 2.7.1+cu126
-Torchvision: 0.22.1+cu126
-```
-
-A instalação utilizada foi:
-
-```powershell
-pip3 install torch==2.7.1 torchvision==0.22.1 --index-url https://download.pytorch.org/whl/cu126
-```
-
-> **Observação:** a versão `cu126` corresponde ao build CUDA utilizado pelo PyTorch neste ambiente. A presença de uma versão mais recente do CUDA indicada pelo driver NVIDIA não significa que seja necessário instalar exatamente essa versão para o PyTorch.
-
-Após a instalação, verifique se o PyTorch reconhece a GPU:
-
-```powershell
-python -c "import torch; print('PyTorch:', torch.__version__); print('CUDA:', torch.version.cuda); print('GPU disponível:', torch.cuda.is_available()); print('GPU:', torch.cuda.get_device_name(0) if torch.cuda.is_available() else 'N/A')"
-```
-
-Um resultado esperado é semelhante a:
-
-```text
-PyTorch: 2.7.1+cu126
-CUDA: 12.6
-GPU disponível: True
-GPU: NVIDIA GeForce RTX 2050
-```
-
-Se aparecer:
-
-```text
-GPU disponível: False
-```
-
-o projeto ainda poderá executar em CPU, porém o treinamento será muito mais lento.
-
----
-
-# 6. Instalação das demais dependências
-
-Com o ambiente virtual ativado, execute:
-
-```powershell
 pip install -r requirements.txt
 ```
 
-O arquivo `requirements.txt` contém as demais bibliotecas utilizadas pelo projeto:
+**Observação:** a instalação do PyTorch pode variar conforme o sistema operacional e a versão do CUDA. Consulte a documentação oficial do [PyTorch](https://pytorch.org/get-started/locally/) caso seja necessário instalar uma versão específica.
 
-```text
-tensorboard_logger
-pytorch-lightning
-matplotlib
-ipywidgets
-seaborn
-tqdm
-pandas
-tensorboard
-scikit-learn
-```
+## 2. Dataset
 
----
+O dataset utilizado neste projeto contém imagens de espécies de plantas pertencentes à mesma família.
 
-# 7. Estrutura do projeto
-
-A estrutura esperada do projeto é semelhante a:
-
-```text
-projeto/
-│
-├── data/
-│   └── pr_dataset/
-│       ├── treino/
-│       ├── teste/
-│       ├── original/
-│       ├── info_dataset
-│       ├── info_levels
-│       └── info_samples
-│
-├── saved_models/
-│
-├── main.py
-├── config.py
-├── moco_builder.py
-├── evaluator.py
-├── network.py
-├── requirements.txt
-└── README.md
-```
-
----
-
-# 8. Dataset
-
-O dataset deve ser colocado dentro da pasta:
-
-```text
-data/pr_dataset/
-```
+O conjunto de dados não é versionado no GitHub. Portanto, é necessário obtê-lo separadamente aqui: [Dataset](https://drive.google.com/drive/folders/1JEDnJ1lWobpZnsCRRyNjIg9cYRQHalwv). O dataset deve ser colocado no diretório `data/pr_dataset/`.
 
 A estrutura esperada é:
 
 ```text
 data/
 └── pr_dataset/
+    ├── original/
     ├── treino/
     ├── teste/
-    ├── original/
     ├── info_dataset
     ├── info_levels
     └── info_samples
 ```
 
----
+- `original/`: imagens originais do dataset.
+- `treino/`: imagens destinadas ao treinamento.
+- `teste/`: imagens destinadas à avaliação.
+- `info_dataset`, `info_levels` e `info_samples`: arquivos auxiliares com informações sobre o conjunto de dados.
 
-# 9. Treinamento do MoCo
+**Importante:** mantenha a divisão original entre treinamento e teste fornecida para o projeto. Não gere uma nova divisão sem necessidade, pois isso pode comprometer a comparação com os experimentos anteriores.
 
-O treinamento é realizado através do `main.py`.
+## 3. Configuração
 
-Com o ambiente virtual ativado e o dataset preparado, execute:
+As principais configurações estão no arquivo `config.py`.
 
-```powershell
-python main.py --train --batch_sizes 32
+Entre os parâmetros disponíveis estão:
+
+| Parâmetro | Descrição | Valor padrão |
+|---|---|---|
+| `dataset_name` | Nome do dataset | `pr_dataset` |
+| `resize_size` | Tamanho para redimensionamento das imagens | `112` |
+| `batch_size` | Tamanho do lote | `64` no arquivo de configuração |
+| `epochs` | Número de épocas de treinamento | `2000` |
+| `learning_rate` | Taxa de aprendizado | `0.05` |
+| `weight_decay` | Regularização do otimizador | `0.0001` |
+| `momentum` | Momentum do SGD | `0.9` |
+| `moco_version` | Versão do MoCo | `2` |
+| `pretrained` | Inicialização com pesos do ImageNet | `False` |
+
+O argumento `--batch_sizes` da linha de comando tem valor padrão `32`. Quando esse argumento é utilizado, o valor informado substitui o tamanho do lote definido no arquivo de configuração.
+
+Para alterar o tamanho das imagens, modifique `resize_size` em `config.py`. Não existe um argumento de linha de comando específico para esse parâmetro na implementação atual.
+
+## 4. Treinamento
+
+O treinamento é executado pelo arquivo `main.py`.
+
+### 4.1. Treinar com MoCo v1
+
+Para treinar utilizando a primeira versão do MoCo:
+
+```bash
+python main.py --train --batch_sizes 32 --moco_version 1
 ```
 
-Nesse comando:
+### 4.2. Treinar com MoCo v2
 
-```text
---train
+Para utilizar a segunda versão do MoCo:
+
+```bash
+python main.py --train --batch_sizes 32 --moco_version 2
 ```
 
-indica que o pipeline deve executar a etapa de treinamento.
+A principal diferença de implementação entre as versões utilizadas neste projeto é a aplicação de uma MLP na cabeça de projeção do encoder, habilitada no MoCo v2.
 
-```text
---batch_sizes 32
+### 4.3. Utilizar pesos pré-treinados no ImageNet
+
+Para inicializar a ResNet-50 com pesos pré-treinados no ImageNet, utilize o argumento `--pre_trained`.
+
+Exemplo com MoCo v1:
+
+```bash
+python main.py --train --batch_sizes 32 --moco_version 1 --pre_trained
 ```
 
-define o tamanho do batch utilizado no treinamento.
+Exemplo com MoCo v2:
 
----
-
-# 10. Configuração do treinamento
-
-As principais configurações estão no arquivo:
-
-```text
-config.py
+```bash
+python main.py --train --batch_sizes 32 --moco_version 2 --pre_trained
 ```
 
-Entre elas estão:
+O argumento `--pre_trained` habilita a inicialização do backbone ResNet-50 com pesos do ImageNet. Isso **não significa carregar um checkpoint de um treinamento MoCo anterior**: os pesos pré-treinados são utilizados como ponto de partida para o treinamento do projeto.
 
-```text
-batch_size = 64
-resize_size = 112
-epochs = 2000
-learning_rate = 0.05
-weight_decay = 1e-4
-momentum = 0.9
+### 4.4. Utilizar diferentes tamanhos de lote
+
+É possível executar experimentos com diferentes tamanhos de lote:
+
+```bash
+python main.py --train --batch_sizes 8 16 32 64 --moco_version 2
 ```
 
-Para executar o experimento com 32 imagens por batch, o valor pode ser informado diretamente pela linha de comando:
+Nesse exemplo, o programa executa um treinamento para cada tamanho de lote informado.
 
-```powershell
-python main.py --train --batch_sizes 32
+O treinamento também pode ser combinado com a opção de pesos pré-treinados:
+
+```bash
+python main.py --train --batch_sizes 8 16 32 64 --moco_version 2 --pre_trained
 ```
 
-O número de épocas é definido na configuração de treinamento.
+**Atenção:** o programa não permite iniciar um treinamento caso o diretório do experimento já exista. Isso evita sobrescrever acidentalmente os resultados de uma execução anterior. Para repetir um experimento, verifique o diretório correspondente antes de executar o comando.
 
-Para um experimento de teste, pode-se utilizar um número menor de épocas, como:
+## 5. Organização dos resultados
 
-```text
-epochs = 10
-```
+Os experimentos são organizados em diretórios dentro de `saved_models/`.
 
-Para o experimento definitivo, deve ser utilizado o número de épocas definido no protocolo experimental do trabalho.
-
----
-
-# 11. Método MoCo
-
-O projeto utiliza MoCo para realizar o aprendizado contrastivo.
-
-A implementação possui dois encoders:
-
-```text
-encoder_q
-encoder_k
-```
-
-O `encoder_q` é atualizado normalmente pelo processo de otimização.
-
-O `encoder_k` é atualizado utilizando uma média móvel (momentum) do encoder de consulta.
-
-O modelo também utiliza uma fila para armazenar representações utilizadas como exemplos negativos durante o aprendizado contrastivo.
-
-A configuração utilizada pelo modelo inclui:
-
-```text
-dim = 128
-K = 65536
-m = 0.999
-T = 0.07
-```
-
-Onde:
-
-* `dim`: dimensão da representação aprendida;
-* `K`: quantidade de representações negativas mantidas na fila;
-* `m`: coeficiente de momentum utilizado para atualizar o encoder de chave;
-* `T`: temperatura utilizada no cálculo dos logits contrastivos.
-
----
-
-# 12. Checkpoints
-
-Durante o treinamento, os modelos são salvos em:
-
-```text
-saved_models/
-```
-
-A pasta do experimento possui um nome que identifica suas configurações, por exemplo:
-
-```text
-saved_models/
-└── pr_dataset_VAL_CROP[0.1]_IMG[112]_B[32]_E[10]_resnet50_MoCo/
-```
-
-Dentro dela são armazenados os checkpoints:
-
-```text
-checkpoints/
-└── ckpt_epoch_10.pth
-```
-
-O checkpoint contém os parâmetros aprendidos pelo modelo durante o treinamento.
-
----
-
-# 13. Avaliação
-
-Após o treinamento, é realizada a segunda etapa do experimento: a avaliação da representação aprendida.
-
-A avaliação utiliza um SVM.
-
-Execute:
-
-```powershell
-python main.py --eval --batch_sizes 32
-```
-
-O programa localizará automaticamente os checkpoints existentes dentro de:
-
-```text
-saved_models/<experimento>/checkpoints/
-```
-
-e utilizará o modelo treinado para extrair as características das imagens.
-
----
-
-# 14. Métricas
-
-A avaliação calcula:
-
-### F1-score
-
-O F1-score combina precisão e revocação (recall) em uma única métrica.
-
-O projeto utiliza:
-
-```python
-average='weighted'
-```
-
-para considerar a quantidade de exemplos de cada classe.
-
-### Top-3 Accuracy
-
-Verifica se a classe correta está entre as três classes com maior probabilidade previstas pelo SVM.
-
-### Top-5 Accuracy
-
-Verifica se a classe correta está entre as cinco classes com maior probabilidade.
-
----
-
-# 15. Resultados
-
-Os resultados da avaliação são salvos em:
-
-```text
-saved_models/<experimento>/results/results.csv
-```
-
-O arquivo possui informações como:
-
-```text
-epoch,f1_score,top3,top5
-```
+O nome de cada diretório registra informações importantes do experimento, como dataset, tamanho das imagens, tamanho do lote, número de épocas, arquitetura, versão do MoCo e uso de pesos pré-treinados.
 
 Exemplo:
 
 ```text
-10,0.057779057127056506,0.27835051546391754,0.3848797250859107
+saved_models/
+└── pr_dataset_VAL_CROP[0.1]_IMG[112]_B[32]_E[2000]_resnet50_MoCo_V2_Pretrained/
+    ├── checkpoints/
+    ├── logs/
+    └── results/
 ```
 
-Esses valores permitem acompanhar o desempenho da representação aprendida pelo MoCo.
+Os diretórios têm as seguintes finalidades:
+
+- `checkpoints/`: armazena os checkpoints do treinamento.
+- `logs/`: armazena os registros utilizados para acompanhar o treinamento.
+- `results/`: armazena os resultados da avaliação.
+
+Os nomes exatos dos diretórios dependem das configurações utilizadas. Por exemplo, a versão do MoCo e a opção de pesos pré-treinados alteram o nome do experimento.
+
+## 6. Checkpoints
+
+Os checkpoints são salvos periodicamente durante o treinamento, conforme a configuração `save_freq` em `config.py`, e também ao final da execução.
+
+Os arquivos seguem o padrão:
+
+```text
+checkpoints/
+├── ckpt_epoch_100.pth
+├── ckpt_epoch_200.pth
+├── ckpt_epoch_300.pth
+└── ...
+```
+
+Cada checkpoint contém informações como:
+
+- Época do treinamento.
+- Pesos do modelo.
+- Estado do otimizador.
+- Configuração utilizada no experimento.
+
+Esses arquivos permitem utilizar os pesos obtidos durante o treinamento na etapa de avaliação.
+
+## 7. Avaliação
+
+A avaliação utiliza as características extraídas pelo encoder treinado para ajustar e avaliar um classificador SVM.
+
+O procedimento inclui a extração das características, a normalização com `StandardScaler` e a busca de hiperparâmetros do SVM por meio de `GridSearchCV`, utilizando validação cruzada com três divisões.
+
+### 7.1. Avaliar um experimento MoCo v1
+
+Para avaliar um experimento treinado com MoCo v1 e sem pesos pré-treinados:
+
+```bash
+python main.py --eval --batch_sizes 32 --moco_version 1
+```
+
+Para um experimento MoCo v1 que utilizou pesos pré-treinados:
+
+```bash
+python main.py --eval --batch_sizes 32 --moco_version 1 --pre_trained
+```
+
+### 7.2. Avaliar um experimento MoCo v2
+
+Para avaliar um experimento treinado com MoCo v2 e sem pesos pré-treinados:
+
+```bash
+python main.py --eval --batch_sizes 32 --moco_version 2
+```
+
+Para um experimento MoCo v2 que utilizou pesos pré-treinados:
+
+```bash
+python main.py --eval --batch_sizes 32 --moco_version 2 --pre_trained
+```
+
+**Importante:** os argumentos usados na avaliação devem corresponder aos utilizados no treinamento, incluindo a versão do MoCo, o uso de pesos pré-treinados e o tamanho do lote. Essas configurações participam da identificação do diretório do experimento.
+
+A avaliação precisa encontrar os checkpoints já gerados. Portanto, execute o treinamento antes de avaliar um novo experimento.
+
+## 8. Métricas
+
+Os resultados da avaliação são armazenados no arquivo:
+
+```text
+saved_models/<diretorio_do_experimento>/results/results.csv
+```
+
+O arquivo contém as seguintes colunas:
+
+| Coluna | Descrição |
+|---|---|
+| `epoch` | Época correspondente ao checkpoint avaliado |
+| `f1_score` | F1-score ponderado utilizado para avaliar a classificação |
+| `top3_acc` | Acurácia Top-3 |
+| `top5_acc` | Acurácia Top-5 |
+
+A avaliação é realizada para os checkpoints encontrados no diretório do experimento. Os resultados são registrados no CSV, permitindo comparar o desempenho ao longo do treinamento.
+
+## 9. Principais argumentos
+
+| Argumento | Descrição |
+|---|---|
+| `--train` | Executa o treinamento |
+| `--eval` | Executa a avaliação dos checkpoints |
+| `--batch_sizes` | Define um ou mais tamanhos de lote |
+| `--moco_version {1,2}` | Seleciona MoCo v1 ou MoCo v2 |
+| `--pre_trained` | Habilita os pesos pré-treinados do ImageNet |
+
+Para consultar a ajuda disponibilizada pelo programa:
+
+```bash
+python main.py --help
+```
+
+## 10. Reprodutibilidade dos experimentos
+
+Para comparar os resultados de maneira consistente:
+
+1. Utilize a mesma divisão do dataset entre treinamento e teste.
+2. Mantenha as configurações do experimento registradas.
+3. Utilize a mesma versão do MoCo na avaliação e no treinamento.
+4. Informe `--pre_trained` na avaliação quando essa opção tiver sido utilizada no treinamento.
+5. Utilize o mesmo tamanho de lote para localizar o diretório correto do experimento.
+6. Preserve os checkpoints e os arquivos CSV gerados.
+
+A reprodutibilidade também depende de fatores como versões das bibliotecas, disponibilidade de GPU, sementes aleatórias e comportamento não determinístico de algumas operações. Portanto, registrar o ambiente e as configurações utilizadas é importante para interpretar diferenças entre execuções.
+
+## 11. Estrutura geral do projeto
+
+```text
+new_cl/
+├── data/
+│   ├── pr_dataset/
+│   └── split_dataset.py
+├── saved_models/
+├── config.py
+├── main.py
+├── trainer.py
+├── evaluator.py
+├── moco_builder.py
+└── requirements.txt
+```
+
+A estrutura acima apresenta os principais arquivos e diretórios do projeto. Outros módulos e arquivos auxiliares podem estar presentes no repositório.
+
+## 12. Observações finais
+
+Este projeto permite investigar a utilização do aprendizado auto-supervisionado com Momentum Contrast na classificação de espécies de plantas.
+
+As principais possibilidades de experimentação incluem:
+
+- Comparação entre MoCo v1 e MoCo v2.
+- Comparação entre treinamentos com e sem pesos pré-treinados no ImageNet.
+- Avaliação de diferentes tamanhos de lote.
+- Comparação das métricas de classificação ao longo das épocas.
+
+Os resultados devem ser interpretados considerando as configurações de cada experimento e a divisão do dataset utilizada.
