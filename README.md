@@ -2,7 +2,7 @@
 
 Este projeto implementa um método de aprendizado auto-supervisionado baseado em **Momentum Contrast (MoCo)** para extração de características de imagens de plantas. As características extraídas são utilizadas posteriormente em um classificador SVM para avaliar o desempenho na classificação das espécies.
 
-O projeto permite utilizar as versões **MoCo v1 e MoCo v2**, com a opção de inicializar a ResNet-50 com pesos pré-treinados no ImageNet.
+O projeto permite utilizar as versões **MoCo v1 e MoCo v2**, selecionar entre as arquiteturas **ResNet-50 e ResNet-152** e inicializar o backbone escolhido com pesos pré-treinados no ImageNet.
 
 ## 1. Requisitos
 
@@ -62,10 +62,13 @@ Entre os parâmetros disponíveis estão:
 | `momentum` | Momentum do SGD | `0.9` |
 | `moco_version` | Versão do MoCo | `2` |
 | `pretrained` | Inicialização com pesos do ImageNet | `False` |
+| `name` | Arquitetura utilizada | `resnet50` |
 
 O argumento `--batch_sizes` da linha de comando tem valor padrão `32`. Quando esse argumento é utilizado, o valor informado substitui o tamanho do lote definido no arquivo de configuração.
 
 O tamanho das imagens pode ser definido pela linha de comando utilizando o argumento `--resize_size`. Os valores aceitos são `112` e `224`, sendo `112` o padrão caso o argumento não seja informado.
+
+A arquitetura utilizada também pode ser selecionada pela linha de comando. Por padrão, o projeto utiliza a ResNet-50. Para utilizar a ResNet-152, informe o argumento `--resnet_152`. Essa opção pode ser combinada com os argumentos de tamanho de imagem, versão do MoCo e inicialização com pesos pré-treinados.
 
 Exemplos:
 
@@ -137,6 +140,24 @@ python main.py --train --batch_sizes 8 16 32 64 --moco_version 2 --pre_trained
 
 **Atenção:** o programa não permite iniciar um treinamento caso o diretório do experimento já exista. Isso evita sobrescrever acidentalmente os resultados de uma execução anterior. Para repetir um experimento, verifique o diretório correspondente antes de executar o comando.
 
+### 4.5. Utilizar a ResNet-152
+
+Por padrão, o projeto utiliza a arquitetura ResNet-50. Para realizar o treinamento com a ResNet-152, utilize o argumento `--resnet_152`.
+
+Exemplo com MoCo v1, imagens de 224 × 224 e pesos pré-treinados no ImageNet:
+
+```bash
+python main.py --train --batch_sizes 32 --moco_version 1 --pre_trained --resize_size 224 --resnet_152
+```
+
+Também é possível executar experimentos com diferentes tamanhos de lote:
+
+```bash
+python main.py --train --batch_sizes 8 16 32 64 --moco_version 1 --pre_trained --resize_size 224 --resnet_152
+```
+
+O argumento `--resnet_152` seleciona a ResNet-152 em vez da ResNet-50. Quando combinado com `--pre_trained`, a arquitetura é inicializada com os pesos pré-treinados correspondentes disponíveis no ImageNet.
+
 ## 5. Organização dos resultados
 
 Os experimentos são organizados em diretórios dentro de `saved_models/`.
@@ -204,6 +225,14 @@ Para um experimento MoCo v1 que utilizou pesos pré-treinados:
 python main.py --eval --batch_sizes 32 --moco_version 1 --pre_trained
 ```
 
+Para avaliar um experimento com ResNet-152, MoCo v1 e pesos pré-treinados no ImageNet, utilize os mesmos parâmetros do treinamento:
+
+```bash
+python main.py --eval --batch_sizes 32 --moco_version 1 --pre_trained --resize_size 224 --resnet_152
+```
+
+O argumento `--resnet_152` deve ser informado para que o programa localize o diretório do experimento correspondente à ResNet-152.
+
 ### 7.2. Avaliar um experimento MoCo v2
 
 Para avaliar um experimento treinado com MoCo v2 e sem pesos pré-treinados:
@@ -251,6 +280,7 @@ A avaliação é realizada para os checkpoints encontrados no diretório do expe
 | `--moco_version {1,2}` | Seleciona MoCo v1 ou MoCo v2 |
 | `--pre_trained` | Habilita os pesos pré-treinados do ImageNet |
 | `--resize_size {112,224}` | Define o tamanho das imagens de entrada; padrão: `112` |
+| `--resnet_152` | Utiliza ResNet-152 em vez de ResNet-50 |
 
 Para consultar a ajuda disponibilizada pelo programa:
 

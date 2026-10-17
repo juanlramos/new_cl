@@ -28,9 +28,15 @@ class SupConTrainer:
         self.writer = SummaryWriter(log_dir=os.path.join(self.cfg.train.checkpoint_dir, 'logs'))
         
         
-        # INJETANDO O MOCO V2 
+        # Seleciona a arquitetura configurada
+        if self.cfg.model.name == 'resnet152':
+            base_encoder = models.resnet152
+        else:
+            base_encoder = models.resnet50
+
+        # Inicializa o MoCo com a arquitetura selecionada
         self.model = moco_builder.MoCo(
-            models.resnet50,
+            base_encoder,
             dim=self.cfg.model.feat_dim,
             K=65536,
             m=0.999,

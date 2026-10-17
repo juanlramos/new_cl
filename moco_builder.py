@@ -31,16 +31,16 @@ class MoCo(nn.Module):
 
         # Cria os dois encoders
         if pretrained:
-            self.encoder_q = base_encoder(
-                weights=models.ResNet50_Weights.DEFAULT
-            )
+            # Seleciona os pesos da ImageNet correspondentes à arquitetura
+            if base_encoder == models.resnet152:
+                weights = models.ResNet152_Weights.DEFAULT
+            else:
+                weights = models.ResNet50_Weights.DEFAULT
 
-            self.encoder_k = base_encoder(
-                weights=models.ResNet50_Weights.DEFAULT
-            )
+            self.encoder_q = base_encoder(weights=weights)
+            self.encoder_k = base_encoder(weights=weights)
 
-            # Substitui a camada final da ResNet50
-            # para produzir vetores de dimensão 'dim'
+            # Substitui a camada final para produzir vetores de dimensão 'dim'
             self.encoder_q.fc = nn.Linear(
                 self.encoder_q.fc.in_features,
                 dim

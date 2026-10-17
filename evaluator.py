@@ -33,8 +33,14 @@ class LinearEvaluator:
     def load_backbone(self, checkpoint_path: str):
         logger.info(f"Carregando checkpoint MoCo: {checkpoint_path}")
 
+        # Seleciona a mesma arquitetura utilizada no treinamento
+        if self.cfg.model.name == 'resnet152':
+            base_encoder = models.resnet152
+        else:
+            base_encoder = models.resnet50
+
         model = moco_builder.MoCo(
-            models.resnet50,
+            base_encoder,
             dim=self.cfg.model.feat_dim,
             K=65536,
             m=0.999,
