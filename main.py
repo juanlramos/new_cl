@@ -19,7 +19,12 @@ def main():
     parser.add_argument('--pre_trained', action='store_true', help='Utiliza pesos pré-treinados da arquitetura escolhida na ImageNet')
     parser.add_argument('--resize_size', type=int, default=112, choices=[112, 224], help='Tamanho das imagens de entrada: 112 ou 224 (padrão: 112)')
     parser.add_argument('--resnet_152', action='store_true', help='Utiliza ResNet-152 em vez de ResNet-50')
+    parser.add_argument('--percent_labels', type=int, nargs='+', default=[100], choices=range(1, 101), help='Porcentagens dos dados rotulados para treinar o SVM. \nExemplo: --percent_labels 10 15 20 25 30 40 50 100')
+
     args = parser.parse_args()
+
+    if len(args.percent_labels) != len(set(args.percent_labels)):
+        parser.error("Não informe porcentagens repetidas em --percent_labels.")
 
     if not args.train and not args.eval:
         parser.print_help()
@@ -102,19 +107,36 @@ def main():
             trainer = SupConTrainer(cfg, train_loader)
             trainer.run()
 
+        
         if args.eval:
-            logger.info(">>> INICIANDO AVALIAÇÃO  <<<")
-            
+            logger.info(">>> INICIANDO AVALIAÇÃO <<<")
+
             if not os.path.exists(train_dir_path) or not os.path.exists(test_dir_path):
-                raise FileNotFoundError(f"Pastas de treino ou teste não encontradas.")
+                raise FileNotFoundError(
+                    "Pastas de treino ou teste não encontradas."
+                )
 
-            logger.info("Carregando loader de Treino para extração de features...")
-            eval_train_loader = dm.get_loader(train_dir_path, is_contrastive=False, mode='test')
-            
-            logger.info("Carregando loader de Teste...")
-            eval_test_loader = dm.get_loader(test_dir_path, is_contrastive=False, mode='test')
+            logger.info("Carregando loader de treino...")
+            eval_train_loader = dm.get_loader(
+                train_dir_path,
+                is_contrastive=False,
+                mode="test"
+            )
 
-            evaluator = LinearEvaluator(cfg, eval_train_loader, eval_test_loader)
+            logger.info("Carregando loader de teste...")
+            eval_test_loader = dm.get_loader(
+                test_dir_path,
+                is_contrastive=False,
+                mode="test"
+            )
+
+            evaluator = LinearEvaluator(
+                cfg,
+                eval_train_loader,
+                eval_test_loader,
+                percent_labels=args.percent_labels
+            )
+
             evaluator.run()
 
 if __name__ == '__main__':
