@@ -183,49 +183,68 @@ class LinearEvaluator:
         return X, y
 
     def select_labeled_data(self, X_train, y_train, percent):
-        """Seleciona a porcentagem de dados usada para treinar o SVM."""
 
         if percent == 100:
             logger.info("Utilizando 100% dos dados de treino.")
             return X_train, y_train
 
-        splitter = StratifiedShuffleSplit(
-            n_splits=1,
-            train_size=percent / 100,
-            random_state=42
+        classes, class_counts = np.unique(
+            y_train, return_counts=True
         )
 
-        try:
-            selected_indices, _ = next(
-                splitter.split(X_train, y_train)
-            )
-        except ValueError as error:
+        # O GridSearchCV com cv=3 precisa de pelo menos
+        # três exemplos de cada classe.
+        if np.min(class_counts) < 3:
             raise ValueError(
-                f"Não foi possível selecionar {percent}% dos dados "
-                "mantendo as espécies representadas."
-            ) from error
+                "Há alguma espécie com menos de 3 imagens no treino. "
+                "Não é possível executar o GridSearchCV com cv=3."
+            )
+
+        rng = np.random.RandomState(42)
+        selected_indices = []
+
+        # Seleciona imagens de cada espécie separadamente.
+        for label, total_class in zip(classes, class_counts):
+            class_indices = np.flatnonzero(y_train == label)
+
+            n_select = round(total_class * percent / 100)
+            n_select = max(3, n_select)
+            n_select = min(n_select, total_class)
+
+            chosen = rng.choice(
+                class_indices,
+                size=n_select,
+                replace=False
+            )
+
+            selected_indices.extend(chosen.tolist())
+
+        selected_indices = np.array(selected_indices)
+        rng.shuffle(selected_indices)
 
         X_selected = X_train[selected_indices]
         y_selected = y_train[selected_indices]
 
-        class_counts = np.unique(
+        selected_classes, selected_counts = np.unique(
             y_selected, return_counts=True
-        )[1]
+        )
 
-        if len(class_counts) != len(np.unique(y_train)):
+        if len(selected_classes) != len(classes):
             raise ValueError(
-                "A seleção deixou alguma espécie sem exemplos."
+                "A seleção não preservou todas as espécies."
             )
 
-        if np.min(class_counts) < 3:
+        if np.min(selected_counts) < 3:
             raise ValueError(
-                "Alguma espécie ficou com menos de 3 exemplos. "
-                "O GridSearchCV com cv=3 não poderá ser executado."
+                "Alguma espécie ficou com menos de 3 exemplos."
             )
+
+        actual_percent = 100 * len(y_selected) / len(y_train)
 
         logger.info(
             f"Dados selecionados: {len(y_selected)}/{len(y_train)} "
-            f"({percent}%)."
+            f"(percentual solicitado: {percent}%; "
+            f"percentual real: {actual_percent:.2f}%)."
         )
 
         return X_selected, y_selected
