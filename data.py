@@ -74,36 +74,26 @@ class DataManager:
         return tuple(mean_list), tuple(std_list)
     
     def get_transforms(self, mode: str = 'train'):
-        normalize = transforms.Normalize(mean=self.mean, std=self.std)
+        normalize = transforms.Normalize(
+            mean=self.mean,
+            std=self.std
+        )
+
         size = self.cfg.resize_size
-        
-        transform_list = []
 
-        if self.train_config.crop_with_validation:
-            transform_list.append(RandomCropWithValidation(size=size, min_info_ratio=self.train_config.crop_validation_info_ratio))
-        else:
-            transform_list.append(transforms.Resize((size, size)))
-
-        # 2. Augmentations (Apenas no treino)
+        # Treinamento do MoCo: utiliza data augmentation
         if mode == 'train':
-            transform_list.append(transforms.RandomHorizontalFlip())
-            transform_list.append(transforms.RandomApply([
-                transforms.ColorJitter(0.4, 0.4, 0.4, 0.1)
-            ], p=0.8))
-            transform_list.append(transforms.RandomGrayscale(p=0.2))
 
-        # 3. Conversão e Normalização (Sempre acontece)
-        transform_list.append(transforms.ToTensor())
-        transform_list.append(normalize)
+            if self.train_config.crop_with_validation:
+                image_transform = RandomCropWithValidation(
+                    size=size,
+                    min_info_ratio=self.train_config.crop_validation_info_ratio
+                )
+            else:
+                image_transform = transforms.Resize((size, size))
 
-        # Retorna a composição da lista
-        return transforms.Compose(transform_list)
-    
-        normalize = transforms.Normalize(mean=self.mean, std=self.std)
-        
-        if mode == 'train':
             return transforms.Compose([
-                transforms.Resize((self.cfg.resize_size, self.cfg.resize_size)),
+                image_transform,
                 transforms.RandomHorizontalFlip(),
                 transforms.RandomApply([
                     transforms.ColorJitter(0.4, 0.4, 0.4, 0.1)
@@ -112,25 +102,36 @@ class DataManager:
                 transforms.ToTensor(),
                 normalize,
             ])
-        else:
-            return transforms.Compose([
-                transforms.Resize((self.cfg.resize_size, self.cfg.resize_size)),
-                transforms.ToTensor(),
-                normalize,
-            ])
 
-    def get_loader(self, dataset_path: str, is_contrastive: bool = True, mode: str = 'train'):
-        transform = self.get_transforms(mode='train')
-        
-        if is_contrastive:
+        # Validação e teste: sem data augmentation
+        return transforms.Compose([
+            transforms.Resize((size, size)),
+            transforms.ToTensor(),
+            normalize,
+        ])
+
+    def get_loader(
+        self,
+        dataset_path: str,
+        is_contrastive: bool = True,
+        mode: str = 'train'
+    ):
+        transform = self.get_transforms(mode=mode)
+
+        # Duas visualizações são necessárias apenas no treino contrastivo
+        if is_contrastive and mode == 'train':
             transform = TwoCropTransform(transform)
 
-        dataset = datasets.ImageFolder(root=dataset_path, transform=transform)
+        dataset = datasets.ImageFolder(
+            root=dataset_path,
+            transform=transform
+        )
+
         batch_size = self.cfg.batch_size
-        
+
         if mode != 'train':
             batch_size = 1
-            
+
         loader = DataLoader(
             dataset,
             shuffle=(mode == 'train'),
@@ -139,5 +140,6 @@ class DataManager:
             pin_memory=True,
             drop_last=(mode == 'train')
         )
-        
+
         return loader
+    
