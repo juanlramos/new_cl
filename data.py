@@ -74,50 +74,53 @@ class DataManager:
         return tuple(mean_list), tuple(std_list)
     
     def get_transforms(self, mode: str = 'train'):
-        normalize = transforms.Normalize(
-            mean=self.mean,
-            std=self.std
-        )
+        normalize = transforms.Normalize(mean=self.mean, std=self.std)
         size = self.cfg.resize_size
+        
+        transform_list = []
 
-        # Na avaliação, não aplicamos transformações aleatórias.
-        if mode != 'train':
+        if self.train_config.crop_with_validation:
+            transform_list.append(RandomCropWithValidation(size=size, min_info_ratio=self.train_config.crop_validation_info_ratio))
+        else:
+            transform_list.append(transforms.Resize((size, size)))
+
+        # 2. Augmentations (Apenas no treino)
+        if mode == 'train':
+            transform_list.append(transforms.RandomHorizontalFlip())
+            transform_list.append(transforms.RandomApply([
+                transforms.ColorJitter(0.4, 0.4, 0.4, 0.1)
+            ], p=0.8))
+            transform_list.append(transforms.RandomGrayscale(p=0.2))
+
+        # 3. Conversão e Normalização (Sempre acontece)
+        transform_list.append(transforms.ToTensor())
+        transform_list.append(normalize)
+
+        # Retorna a composição da lista
+        return transforms.Compose(transform_list)
+    
+        normalize = transforms.Normalize(mean=self.mean, std=self.std)
+        
+        if mode == 'train':
             return transforms.Compose([
-                transforms.Resize((size, size)),
+                transforms.Resize((self.cfg.resize_size, self.cfg.resize_size)),
+                transforms.RandomHorizontalFlip(),
+                transforms.RandomApply([
+                    transforms.ColorJitter(0.4, 0.4, 0.4, 0.1)
+                ], p=0.8),
+                transforms.RandomGrayscale(p=0.2),
+                transforms.ToTensor(),
+                normalize,
+            ])
+        else:
+            return transforms.Compose([
+                transforms.Resize((self.cfg.resize_size, self.cfg.resize_size)),
                 transforms.ToTensor(),
                 normalize,
             ])
 
-        # No treinamento, mantemos as transformações originais.
-        transform_list = []
-
-        if self.train_config.crop_with_validation:
-            transform_list.append(
-                RandomCropWithValidation(
-                    size=size,
-                    min_info_ratio=self.train_config.crop_validation_info_ratio
-                )
-            )
-        else:
-            transform_list.append(
-                transforms.Resize((size, size))
-            )
-
-        transform_list.extend([
-            transforms.RandomHorizontalFlip(),
-            transforms.RandomApply([
-                transforms.ColorJitter(0.4, 0.4, 0.4, 0.1)
-            ], p=0.8),
-            transforms.RandomGrayscale(p=0.2),
-            transforms.ToTensor(),
-            normalize,
-        ])
-
-        return transforms.Compose(transform_list)
-
-
     def get_loader(self, dataset_path: str, is_contrastive: bool = True, mode: str = 'train'):
-        transform = self.get_transforms(mode=mode)
+        transform = self.get_transforms(mode='train')
         
         if is_contrastive:
             transform = TwoCropTransform(transform)

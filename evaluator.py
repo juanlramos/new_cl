@@ -323,7 +323,7 @@ class LinearEvaluator:
 
         output_csv_file = os.path.join(
             self.results_path,
-            f"results_deterministic_labels_{percent}.csv"
+            f"results_labels_{percent}.csv"
         )
 
         pd.DataFrame([metrics]).to_csv(
