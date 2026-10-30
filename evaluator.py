@@ -52,15 +52,17 @@ class LinearEvaluator:
         self.percent_labels = percent_labels
         self.device = self.cfg.train.device
 
+        # Pasta exclusiva para os resultados sem data augmentation
         self.results_path = os.path.join(
             self.cfg.train.checkpoint_dir,
-            "results"
+            "results_sem_augmentation"
         )
         os.makedirs(self.results_path, exist_ok=True)
 
-        # Resultados da avaliação anterior, usados para escolher a época
+        # O CSV original continua sendo utilizado para selecionar o checkpoint
         self.csv_file = os.path.join(
-            self.results_path,
+            self.cfg.train.checkpoint_dir,
+            "results",
             "results.csv"
         )
 
